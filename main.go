@@ -187,12 +187,13 @@ func checkReflected(targetURL string) ([]string, error) {
 
 
 	body := string(b)
+	
 
 	if details {
-
+		fmt.Println()
 		fmt.Println(au.Yellow(resp.Status), "    " + "dkuo")
-
 		fmt.Println(body)
+		fmt.Println()
 	}
 	if strings.HasPrefix(resp.Status, "3") {
 		return out, nil
