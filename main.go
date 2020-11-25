@@ -71,7 +71,7 @@ func main() {
 
 
 	appendChecks := makePool(initialChecks, func(c paramCheck, output chan paramCheck) {
-		reflected, err := checkReflected(c.url)
+		reflected,_,err := checkReflected(c.url)
 		if err != nil {
 			return
 		}
@@ -87,7 +87,7 @@ func main() {
 	})
 
 	charChecks := makePool(appendChecks, func(c paramCheck, output chan paramCheck) {
-		_, wasReflected, err := checkAppend(c.url, c.param, "xxxxxxdkuo")
+		_, wasReflected,_, err := checkAppend(c.url, c.param, "xxxxxxdkuo")
 		if err != nil {
 			return
 		}
@@ -101,13 +101,17 @@ func main() {
 
 	done := makePool(charChecks, func(c paramCheck, output chan paramCheck) {
 		for _, char := range []string{"\"", "'", "<", "%22", "%27", "%3c"} {
-			out, wasReflected, err := checkAppend(c.url, c.param, "xxxxxx"+char+"dkuo")
+			out, wasReflected, body,err := checkAppend(c.url, c.param, "xxxxxx"+char+"dkuo")
 			if err != nil {
 				continue
 			}
 
 			if wasReflected {
 				fmt.Printf("[!] %s %s %s\n", au.Yellow(c.param), au.Yellow(char), out)
+				if details {
+					fmt.Printf("[!] %s %s %s\n", au.Yellow(c.param), au.Yellow(char), out)
+					fmt.Println(body)
+				}
 			}
 		}
 	})
@@ -124,11 +128,11 @@ func main() {
 
 }
 
-func checkAppend(targetURL, param, suffix string) (string, bool, error) {
+func checkAppend(targetURL, param, suffix string) (string, bool, string, error) {
 	out := ""
 	u, err := url.Parse(targetURL)
 	if err != nil {
-		return out, false, err
+		return out, false,"", err
 	}
 
 	qs := u.Query()
@@ -138,29 +142,30 @@ func checkAppend(targetURL, param, suffix string) (string, bool, error) {
 	u.RawQuery = qs.Encode()
 
 
-	reflected, err := checkReflected(u.String())
+	reflected, body, err := checkReflected(u.String())
 
 	if err != nil {
-		return out, false, err
+		return out, false, "", err
 	}
 
 	for _, r := range reflected {
 		if r == param {
 			out = u.String()
-			return out, true, nil
+			return out, true, body, nil
 		}
 	}
 
-	return out, false, nil
+	return out, false, "", nil
 }
 
 
-func checkReflected(targetURL string) ([]string, error) {
+func checkReflected(targetURL string) ([]string, string ,error) {
 	out := make([]string, 0)
+	body := ""
 	req, err := http.NewRequest("GET", targetURL, nil)
 
 	if err != nil {
-		return out, err
+		return out, body, err
 	}
 
 	if usecookie{
@@ -171,46 +176,39 @@ func checkReflected(targetURL string) ([]string, error) {
 	resp, err := httpClient.Do(req)
 
 	if err != nil {
-		return out, err
+		return out, body, err
 	}
 
 	if resp.Body == nil {
-		return out, err
+		return out, body, err
 	}
 	defer resp.Body.Close()
 
 	b, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		return out, err
+		return out, body, err
 	}
 
 
-	body := string(b)
-	
 
-	if details {
-		fmt.Println("===================================================================================")
-		fmt.Println(au.Yellow(resp.Status), "    " + "dkuo")
-		fmt.Println(body)
-		fmt.Println("===================================================================================")
-		fmt.Println()
-	}
-	if strings.HasPrefix(resp.Status, "3") {
-		return out, nil
-	}
+	//if strings.HasPrefix(resp.Status, "3") {
+	//	return out, nil
+	//}
 
 	ct := resp.Header.Get("Content-Type")
 
 	if ct != "" && !strings.Contains(ct, "html") {
-		return out, nil
+		return out, body, nil
 	}
 
 	u, err := url.Parse(targetURL)
 
 	if err != nil {
-		return out, err
+		return out, body, err
 	}
+
+	body = string(b)
 
 	for key, vv := range u.Query() {
 		for _, v := range vv {
@@ -226,7 +224,7 @@ func checkReflected(targetURL string) ([]string, error) {
 		}
 	}
 
-	return out, nil
+	return out, body, nil
 
 }
 
