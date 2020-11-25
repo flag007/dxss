@@ -107,10 +107,11 @@ func main() {
 			}
 
 			if wasReflected {
-				fmt.Printf("[!] %s %s %s\n", au.Yellow(c.param), au.Yellow(char), out)
 				if details {
 					fmt.Printf("[!] %s %s %s\n", au.Yellow(c.param), au.Yellow(char), out)
 					fmt.Println(body)
+				}else {
+					fmt.Printf("[!] %s %s %s\n", au.Yellow(c.param), au.Yellow(char), out)
 				}
 			}
 		}
