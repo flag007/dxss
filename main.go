@@ -216,7 +216,7 @@ func checkReflected(targetURL string) ([]string, string ,error) {
 
 			v,_ := url.QueryUnescape(v)
 
-			if !strings.Contains(body, v) {
+			if !strings.Contains(strings.ToLower(body), strings.ToLower(v)) {
 				continue
 			}
 
